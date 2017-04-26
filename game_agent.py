@@ -190,13 +190,6 @@ class MinimaxPlayer(IsolationPlayer):
                 depth = depth + 1
                 if score >= best_move[0]:
                     best_move = (score, move)
-                if not self.iterative:
-                    break
-                    # The search method call (alpha beta or minimax) should happen in
-                    # here in order to avoid timeout. The try/except block will
-                    # automatically catch the exception raised by the search method
-                    # when the timer gets close to expiring
-                    # pass
 
         except SearchTimeout:
             # Handle any actions required at timeout, if necessary
