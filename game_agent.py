@@ -2,7 +2,7 @@
 test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
-import random
+from functools import reduce
 
 
 class SearchTimeout(Exception):
@@ -34,8 +34,11 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
+    player_moves = len(game.get_legal_moves(player))
+    opponent_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    return float(player_moves - opponent_moves)
     # TODO: finish this function!
-    raise NotImplementedError
+    # raise NotImplementedError
 
 
 def custom_score_2(game, player):
@@ -60,8 +63,10 @@ def custom_score_2(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
+    player_moves = len(game.get_legal_moves(player))
+    return float(player_moves)
     # TODO: finish this function!
-    raise NotImplementedError
+    # raise NotImplementedError
 
 
 def custom_score_3(game, player):
@@ -86,6 +91,9 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
+    opponent_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    return float(-opponent_moves)
+
     # TODO: finish this function!
     raise NotImplementedError
 
@@ -155,20 +163,51 @@ class MinimaxPlayer(IsolationPlayer):
         """
         self.time_left = time_left
 
-        # Initialize the best move so that this function returns something
-        # in case the search fails due to timeout
-        best_move = (-1, -1)
-
         try:
-            # The try/except block will automatically catch the exception
-            # raised when the timer is about to expire.
-            return self.minimax(game, self.search_depth)
+            # Return immediately if there are no legal moves
+            legal_moves = game.get_legal_moves(game.active_player)
+            if len(legal_moves) == 0:
+                return -1, -1
+
+            # Choose an initial move from the opening book.
+            reflectible_moves = [(1, 2), (1, 4), (2, 1), (2, 5), (4, 1), (4, 5), (5, 2), (5, 4)]
+            if game.get_player_location(game.active_player) is None:
+                if game.move_is_legal((3, 3)):
+                    # Choose the centre point as the first move
+                    return 3, 3
+                else:
+                    # Choose a move that player1 cannot reflect and has the best score
+                    unreflectible_legal_moves = legal_moves - reflectible_moves
+                    scored_moves = map(lambda x: (self.score(game.forecast_move(x)), x), unreflectible_legal_moves)
+                    best_move = reduce((lambda x, y: max(x[0], y[0])), scored_moves)
+                    return best_move
+
+            # Default to a random legal move until we find a better one (in case timeout happens too quick)
+            best_move = (float(-50), legal_moves[0])
+
+            while depth <= self.search_depth:
+                (score, move) = self.minimax(game, depth)
+                depth = depth + 1
+                if score >= best_move[0]:
+                    best_move = (score, move)
+                if not self.iterative:
+                    break
+                    # The search method call (alpha beta or minimax) should happen in
+                    # here in order to avoid timeout. The try/except block will
+                    # automatically catch the exception raised by the search method
+                    # when the timer gets close to expiring
+                    # pass
 
         except SearchTimeout:
-            pass  # Handle any actions required after timeout as needed
+            # Handle any actions required at timeout, if necessary
+            print('Timed out at depth {}'.format(depth))
+            return best_move[1]
+            # pass
+        depth = 1
 
         # Return the best move from the last completed search iteration
-        return best_move
+        # raise NotImplementedError
+        return best_move[1]
 
     def minimax(self, game, depth):
         """Implement depth-limited minimax search algorithm as described in
@@ -212,8 +251,26 @@ class MinimaxPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
+        if depth == 0:
+            score = self.score(game, game.inactive_player)
+            print('score is {}'.format(score))
+            # signed_score = -score if maximizing_player else score
+            return score, None
+
+        legal_moves = game.get_legal_moves(game.active_player)
+        print('{} legal moves at depth {}'.format(legal_moves, depth))
+        best_move = (float(-50), None)
+        for move in legal_moves:
+            forecasted_game = game.forecast_move(move)
+            current_score = self.score(game, game.inactive_player)
+            print('taking move {}'.format(move))
+            (score, _) = self.minimax_with_score(forecasted_game, depth - 1)
+            max_score = max(current_score, score)
+            if max_score >= best_move[0]:
+                best_move = (max_score, move)
         # TODO: finish this function!
-        raise NotImplementedError
+        print('best move chosen as {}'.format(best_move))
+        return best_move
 
 
 class AlphaBetaPlayer(IsolationPlayer):
