@@ -2,7 +2,6 @@
 test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
-from functools import reduce
 
 
 class SearchTimeout(Exception):
@@ -179,14 +178,15 @@ class MinimaxPlayer(IsolationPlayer):
                     # Choose a move that player1 cannot reflect and has the best score
                     unreflectible_legal_moves = legal_moves - reflectible_moves
                     scored_moves = map(lambda x: (self.score(game.forecast_move(x)), x), unreflectible_legal_moves)
-                    best_move = reduce((lambda x, y: max(x[0], y[0])), scored_moves)
+                    best_move = max(scored_moves, lambda x: x[0])
                     return best_move
 
             # Default to a random legal move until we find a better one (in case timeout happens too quick)
             best_move = (float(-50), legal_moves[0])
 
+            depth = 1
             while depth <= self.search_depth:
-                (score, move) = self.minimax(game, depth)
+                (score, move) = self.minimax_with_score(game, depth)
                 depth = depth + 1
                 if score >= best_move[0]:
                     best_move = (score, move)
@@ -210,6 +210,14 @@ class MinimaxPlayer(IsolationPlayer):
         return best_move[1]
 
     def minimax(self, game, depth):
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        best_move = self.minimax_with_score(game, depth)
+        return best_move[1]
+
+
+    def minimax_with_score(self, game, depth):
         """Implement depth-limited minimax search algorithm as described in
         the lectures.
 
@@ -251,23 +259,23 @@ class MinimaxPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
+        current_score = float(-50)
+
         if depth == 0:
-            score = self.score(game, game.inactive_player)
-            print('score is {}'.format(score))
-            # signed_score = -score if maximizing_player else score
-            return score, None
+            current_score = self.score(game, game.inactive_player)
+            print('score is {}'.format(current_score))
+            return current_score, None
 
         legal_moves = game.get_legal_moves(game.active_player)
         print('{} legal moves at depth {}'.format(legal_moves, depth))
         best_move = (float(-50), None)
         for move in legal_moves:
             forecasted_game = game.forecast_move(move)
-            current_score = self.score(game, game.inactive_player)
+            # current_score = self.score(game, game.inactive_player)
             print('taking move {}'.format(move))
             (score, _) = self.minimax_with_score(forecasted_game, depth - 1)
-            max_score = max(current_score, score)
-            if max_score >= best_move[0]:
-                best_move = (max_score, move)
+            if score >= best_move[0]:
+                best_move = (score, move)
         # TODO: finish this function!
         print('best move chosen as {}'.format(best_move))
         return best_move
