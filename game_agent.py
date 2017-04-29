@@ -186,7 +186,7 @@ class MinimaxPlayer(IsolationPlayer):
 
             depth = 1
             while depth <= self.search_depth:
-                (score, move) = self.minimax_with_score(game, depth)
+                (score, move) = self.minimax_with_score(game, depth, True)
                 depth = depth + 1
                 if score >= best_move[0]:
                     best_move = (score, move)
@@ -200,17 +200,18 @@ class MinimaxPlayer(IsolationPlayer):
 
         # Return the best move from the last completed search iteration
         # raise NotImplementedError
+        print('Final selected move is {}'.format(best_move))
         return best_move[1]
 
     def minimax(self, game, depth):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        best_move = self.minimax_with_score(game, depth)
+        best_move = self.minimax_with_score(game, depth, True)
         return best_move[1]
 
 
-    def minimax_with_score(self, game, depth):
+    def minimax_with_score(self, game, depth, is_maximising_player):
         """Implement depth-limited minimax search algorithm as described in
         the lectures.
 
@@ -252,25 +253,33 @@ class MinimaxPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        current_score = float(-50)
-
         if depth == 0:
             current_score = self.score(game, game.inactive_player)
-            print('score is {}'.format(current_score))
+            # print('score is {}'.format(current_score))
             return current_score, None
 
         legal_moves = game.get_legal_moves(game.active_player)
-        print('{} legal moves at depth {}'.format(legal_moves, depth))
+        # print('{} legal moves at depth {}'.format(legal_moves, depth))
         best_move = (float(-50), None)
         for move in legal_moves:
             forecasted_game = game.forecast_move(move)
-            # current_score = self.score(game, game.inactive_player)
-            print('taking move {}'.format(move))
-            (score, _) = self.minimax_with_score(forecasted_game, depth - 1)
+            # print('taking move {}'.format(move))
+            (score, _) = self.minimax_with_score(forecasted_game, depth - 1, not is_maximising_player)
             if score >= best_move[0]:
                 best_move = (score, move)
-        # TODO: finish this function!
-        print('best move chosen as {}'.format(best_move))
+
+        print('best move chosen as {} for {}'.format(best_move, 'Player1' if is_maximising_player else 'Player2'))
+        """
+        If this is player2, negate the score, so that player1 picks the move that minimises player2's score.
+        For example, let's assume the following:
+        - Player1 has two legal moves, move11 and move 12.
+        - If Player1 chooses move11, Player2 has two legal moves; move21 and move22 which score 4 and 5 respectively.
+        - If player1 chooses move12, Player2 has two legal moves; move23 and move24 which score 6 and 7 respectively.
+        Given the above, if Player1 chooses move11, player2 will choose move22 (score=5). And if Player1 chooses move12, Player2 will choose move24 (score=7).
+        
+        """
+        if not is_maximising_player:
+            best_move = (-best_move[0], best_move[1])
         return best_move
 
 
