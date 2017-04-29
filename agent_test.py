@@ -44,12 +44,21 @@ class IsolationTest(unittest.TestCase):
         next_move = self.get_next_move(11, depth, visited_moves)
         self.assertTrue(next_move == (2, 6))
 
+    @unittest.skip
     def test_move_depth2_3(self):
         depth = 2
         visited_moves = [(2, 1), (2, 2), (2, 4), (2, 6), (3, 2), (3, 3), (3, 4), (3, 8), (4, 2), (4, 3), (4, 4), (4, 7),
                          (5, 2), (5, 7), (6, 7), (6, 8), (7, 5), (7, 8), (8, 6), (8, 7), (1, 7), (2, 3)]
         next_move = self.get_next_move(11, depth, visited_moves)
         self.assertTrue(next_move == (2, 9))
+
+    def test_move_depth2_3(self):
+        depth = 2
+        visited_moves = [(1, 4), (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 8), (3, 3), (3, 6), (3, 7), (4, 2), (4, 3),
+                         (4, 4), (4, 5), (4, 7), (5, 4), (5, 5), (5, 8), (6, 8), (7, 3), (7, 4), (7, 7), (7, 8), (8, 5),
+                         (8, 6), (8, 7), (7, 5), (5, 7)]
+        next_move = self.get_next_move(11, depth, visited_moves)
+        self.assertTrue(next_move == (8, 3))
 
     def get_next_move(self, board_size, depth, visited_moves):
         player1 = game_agent.MinimaxPlayer(depth)
@@ -60,7 +69,7 @@ class IsolationTest(unittest.TestCase):
             print('Applying move {}'.format(move))
             self.game.apply_move(move)
         print(self.game.print_board())
-        next_move = player1.get_move(self.game, lambda: 100000)
+        next_move = player1.get_move(self.game, lambda: 150)
         self.game.apply_move(next_move)
         print(self.game.print_board())
         return next_move
