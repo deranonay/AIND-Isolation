@@ -410,7 +410,8 @@ class Project1Test(unittest.TestCase):
                                           iterative_search, method,
                                           loc1=starting_location,
                                           loc2=adversary_location)
-
+            print('Board at depth {}'.format(test_depth))
+            print(board.print_board())
             # disable search timeout by returning a constant value
             agentUT.time_left = lambda: 1e3
             _, move = agentUT.minimax_with_score(board, test_depth, True)

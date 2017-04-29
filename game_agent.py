@@ -185,7 +185,7 @@ class MinimaxPlayer(IsolationPlayer):
             best_move = legal_moves[0]
 
             depth = 1
-            while depth <= self.search_depth:
+            while depth <= self.search_depth or self.search_depth == -1:
                 best_move = self.minimax(game, depth)
                 depth = depth + 1
 
@@ -250,19 +250,19 @@ class MinimaxPlayer(IsolationPlayer):
             raise SearchTimeout()
 
         if depth == 0:
-            current_score = self.score(game, game.inactive_player)
-            # print('score is {}'.format(current_score))
+            current_score = self.score(game, game.active_player if is_maximising_player else game.inactive_player)
+            print('score is {}'.format(current_score))
             return current_score, None
 
         legal_moves = game.get_legal_moves(game.active_player)
-        # print('{} legal moves at depth {}'.format(legal_moves, depth))
-        best_move = (float(-50), None)
+        print('Legal moves at depth {} for {}: {}'.format(depth, 'Player1' if is_maximising_player else 'Player2', legal_moves))
+        best_move = (float(-50) if is_maximising_player else float(50), None)
+        get_better_move = lambda x, y: max(x, y, key=lambda a: a[0]) if is_maximising_player else min(x, y, key=lambda a: a[0])
         for move in legal_moves:
             forecasted_game = game.forecast_move(move)
-            # print('taking move {}'.format(move))
-            (score, _) = self.minimax_with_score(forecasted_game, depth - 1, not is_maximising_player)
-            if score >= best_move[0]:
-                best_move = (score, move)
+            (new_score, _) = self.minimax_with_score(forecasted_game, depth - 1, not is_maximising_player)
+            new_move = (new_score, move)
+            best_move = get_better_move(new_move, best_move)
 
         print('best move chosen as {} for {}'.format(best_move, 'Player1' if is_maximising_player else 'Player2'))
         """
@@ -274,8 +274,6 @@ class MinimaxPlayer(IsolationPlayer):
         Given the above, if Player1 chooses move11, player2 will choose move22 (score=5). And if Player1 chooses move12, Player2 will choose move24 (score=7).
         
         """
-        if not is_maximising_player:
-            best_move = (-best_move[0], best_move[1])
         return best_move
 
 
