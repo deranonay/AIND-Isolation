@@ -97,6 +97,31 @@ def custom_score_3(game, player):
     raise NotImplementedError
 
 
+def minimax_with_score(isolation_player, game, depth, is_maximising_player):
+    if isolation_player.time_left() < isolation_player.TIMER_THRESHOLD:
+        raise SearchTimeout()
+
+    legal_moves = game.get_legal_moves(game.active_player)
+    if depth == 0 or len(legal_moves) == 0:
+        current_score = isolation_player.score(game, game.active_player if is_maximising_player else game.inactive_player)
+        print('score is {}'.format(current_score))
+        return current_score, None
+
+    print('Legal moves at depth {} for {}: {}'.format(depth, 'Player1' if is_maximising_player else 'Player2',
+                                                      legal_moves))
+    best_move = (float(-50) if is_maximising_player else float(50), None)
+    get_better_move = lambda x, y: max(x, y, key=lambda a: a[0]) if is_maximising_player else min(x, y,
+                                                                                                  key=lambda a: a[0])
+    for move in legal_moves:
+        forecasted_game = game.forecast_move(move)
+        (new_score, _) = minimax_with_score(isolation_player, forecasted_game, depth - 1, not is_maximising_player)
+        new_move = (new_score, move)
+        best_move = get_better_move(new_move, best_move)
+
+    print('best move chosen as {} for {}'.format(best_move, 'Player1' if is_maximising_player else 'Player2'))
+    return best_move
+
+
 class IsolationPlayer:
     """Base class for minimax and alphabeta agents -- this class is never
     constructed or tested directly.
@@ -200,14 +225,6 @@ class MinimaxPlayer(IsolationPlayer):
         return best_move
 
     def minimax(self, game, depth):
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise SearchTimeout()
-
-        best_move = self.minimax_with_score(game, depth, True)
-        return best_move[1]
-
-
-    def minimax_with_score(self, game, depth, is_maximising_player):
         """Implement depth-limited minimax search algorithm as described in
         the lectures.
 
@@ -216,7 +233,7 @@ class MinimaxPlayer(IsolationPlayer):
 
         **********************************************************************
             You MAY add additional methods to this class, or define helper
-                 functions to implement the required functionality.
+                    functions to implement the required functionality.
         **********************************************************************
 
         Parameters
@@ -249,32 +266,8 @@ class MinimaxPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        if depth == 0:
-            current_score = self.score(game, game.active_player if is_maximising_player else game.inactive_player)
-            print('score is {}'.format(current_score))
-            return current_score, None
-
-        legal_moves = game.get_legal_moves(game.active_player)
-        print('Legal moves at depth {} for {}: {}'.format(depth, 'Player1' if is_maximising_player else 'Player2', legal_moves))
-        best_move = (float(-50) if is_maximising_player else float(50), None)
-        get_better_move = lambda x, y: max(x, y, key=lambda a: a[0]) if is_maximising_player else min(x, y, key=lambda a: a[0])
-        for move in legal_moves:
-            forecasted_game = game.forecast_move(move)
-            (new_score, _) = self.minimax_with_score(forecasted_game, depth - 1, not is_maximising_player)
-            new_move = (new_score, move)
-            best_move = get_better_move(new_move, best_move)
-
-        print('best move chosen as {} for {}'.format(best_move, 'Player1' if is_maximising_player else 'Player2'))
-        """
-        If this is player2, negate the score, so that player1 picks the move that minimises player2's score.
-        For example, let's assume the following:
-        - Player1 has two legal moves, move11 and move 12.
-        - If Player1 chooses move11, Player2 has two legal moves; move21 and move22 which score 4 and 5 respectively.
-        - If player1 chooses move12, Player2 has two legal moves; move23 and move24 which score 6 and 7 respectively.
-        Given the above, if Player1 chooses move11, player2 will choose move22 (score=5). And if Player1 chooses move12, Player2 will choose move24 (score=7).
-        
-        """
-        return best_move
+        best_move = minimax_with_score(self, game, depth, True)
+        return best_move[1]
 
 
 class AlphaBetaPlayer(IsolationPlayer):
