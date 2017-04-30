@@ -39,13 +39,22 @@ def custom_score(game, player):
     if game.is_winner(player):
         return float("inf")
 
-    w, h = game.width, game.height
     y, x = game.get_player_location(player)
-    sq_dist = float((h - y) ** 2 + (w - x) ** 2)
 
-    player_moves = len(game.get_legal_moves(player))
-    opponent_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(player_moves - opponent_moves**2)
+    max_move = 8
+    player_moves = len(game.get_legal_moves(player)) / max_move
+    opponent_moves = len(game.get_legal_moves(game.get_opponent(player))) / max_move
+    inv_opponent_moves = (float(1) / opponent_moves) if opponent_moves > 0 else float(1)
+
+    blanks = game.get_blank_spaces()
+    sum_move = (0, 0)
+    for blank in blanks:
+        sum_move = (sum_move[0] + blank[0], sum_move[1] + blank[1])
+    blanks_centre_y = float(sum_move[0] / len(blanks))
+    blanks_centre_x = float(sum_move[1] / len(blanks))
+    sq_dist_from_blanks = float((y - blanks_centre_y) ** 2 + (x - blanks_centre_x) ** 2)
+    inv_sq_dist_from_blanks = (float(1) / sq_dist_from_blanks) if sq_dist_from_blanks > 0 else float(1)
+    return inv_sq_dist_from_blanks + player_moves + inv_opponent_moves
 
 
 def custom_score_2(game, player):
@@ -70,8 +79,27 @@ def custom_score_2(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    player_moves = len(game.get_legal_moves(player))
-    return float(player_moves)
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    blanks = game.get_blank_spaces()
+    sum_move = (0, 0)
+    for blank in blanks:
+        sum_move = (sum_move[0] + blank[0], sum_move[1] + blank[1])
+    blanks_centre_y = float(sum_move[0] / len(blanks))
+    blanks_centre_x = float(sum_move[1] / len(blanks))
+
+    y, x = game.get_player_location(player)
+    sq_dist_from_blanks = float((y - blanks_centre_y) ** 2 + (x - blanks_centre_x) ** 2) / game.width**2*2
+    inv_sq_dist_from_blanks = (float(1) / sq_dist_from_blanks) if sq_dist_from_blanks > 0 else float(1)
+
+    y2, x2 = game.get_player_location(game.get_opponent(player))
+    sq_dist_from_blanks_opp = float((y2 - blanks_centre_y) ** 2 + (x2 - blanks_centre_x) ** 2) / game.width**2*2
+
+    return sq_dist_from_blanks_opp * inv_sq_dist_from_blanks
 
 
 def custom_score_3(game, player):
@@ -96,8 +124,22 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    opponent_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(-opponent_moves)
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    player_loc = game.get_player_location(player)
+    opponent_loc = game.get_player_location(game.get_opponent(player))
+    dist_to_opp = (player_loc[0] - opponent_loc[0])**2 + (player_loc[1] - opponent_loc[1])**2
+    inv_dist_to_opp = float(1) / dist_to_opp
+
+    centre_loc = game.width/2, game.height/2
+    dist_to_centre = (player_loc[0] - centre_loc[0])**2 + (player_loc[1] - centre_loc[1])**2
+    inv_dist_to_centre = (float(1) / dist_to_centre) if dist_to_centre > 0 else 1
+
+    return inv_dist_to_centre + inv_dist_to_opp
 
 
 class IsolationPlayer:
