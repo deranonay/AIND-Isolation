@@ -303,7 +303,7 @@ class Project1Test(unittest.TestCase):
 
         for move in board.get_legal_moves():
             next_state = board.forecast_move(move)
-            v, _ = agentUT.alphabeta(next_state, test_depth)
+            v, _ = game_agent.minimax_with_score(agentUT, next_state, test_depth, True, apply_alphabeta=True)
 
             self.assertTrue(type(v) == float,
                             ("Alpha Beta function should return a floating " +
@@ -468,7 +468,7 @@ class Project1Test(unittest.TestCase):
 
             # disable search timeout by returning a constant value
             agentUT.time_left = lambda: 1e3
-            _, move = agentUT.alphabeta(board, test_depth)
+            _, move = game_agent.minimax_with_score(agentUT, board, test_depth, True, apply_alphabeta=True)
 
             num_explored_valid = board.counts[0] == counts[idx][0]
             num_unique_valid = board.counts[1] == counts[idx][1]
