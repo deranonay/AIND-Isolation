@@ -33,9 +33,19 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    w, h = game.width, game.height
+    y, x = game.get_player_location(player)
+    sq_dist = float((h - y) ** 2 + (w - x) ** 2)
+
     player_moves = len(game.get_legal_moves(player))
     opponent_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(player_moves - opponent_moves)
+    return float(player_moves - opponent_moves**2)
 
 
 def custom_score_2(game, player):
@@ -98,12 +108,11 @@ def minimax_with_score(isolation_player, game, depth, is_maximising_player,
     legal_moves = game.get_legal_moves(game.active_player)
     if depth == 0 or len(legal_moves) == 0:
         current_score = isolation_player.score(game, game.active_player if is_maximising_player else game.inactive_player)
-        print('score is {}'.format(current_score))
-        return current_score, None
+        # print('score is {}'.format(current_score))
+        return current_score, legal_moves[0] if len(legal_moves) > 0 else (-1, -1)
 
-    print('Legal moves at depth {} for {}: {}'.format(depth, 'Player1' if is_maximising_player else 'Player2',
-                                                      legal_moves))
-    best_move = (float(-50) if is_maximising_player else float(50), None)
+    # print('Legal moves at depth {} for {}: {}'.format(depth, 'Player1' if is_maximising_player else 'Player2', legal_moves))
+    best_move = (float(-50) if is_maximising_player else float(50), legal_moves[0])
     get_better_move = lambda x, y: max(x, y, key=lambda a: a[0]) if is_maximising_player else min(x, y, key=lambda a: a[0])
     updated_alpha = lambda a, x: max(a, x) if is_maximising_player else a
     updated_beta = lambda b, x: min(b, x) if not is_maximising_player else b
@@ -119,7 +128,7 @@ def minimax_with_score(isolation_player, game, depth, is_maximising_player,
             if alpha >= beta:
                 break
 
-    print('best move chosen as {} for {}'.format(best_move, 'Player1' if is_maximising_player else 'Player2'))
+    # print('best move chosen as {} for {}'.format(best_move, 'Player1' if is_maximising_player else 'Player2'))
     return best_move
 
 
@@ -146,7 +155,7 @@ def get_generic_move(isolation_player, game, time_left, player_func):
 
     # Return the best move from the last completed search iteration
     # raise NotImplementedError
-    print('Final selected move is {}'.format(best_move))
+    # print('Final selected move is {}'.format(best_move))
     return best_move
 
 
@@ -254,9 +263,6 @@ class MinimaxPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise SearchTimeout()
-
         best_move = minimax_with_score(self, game, depth, True)
         return best_move[1]
 
@@ -344,8 +350,5 @@ class AlphaBetaPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise SearchTimeout()
-
         best_move = minimax_with_score(self, game, depth, True, alpha, beta, True)
         return best_move[1]
