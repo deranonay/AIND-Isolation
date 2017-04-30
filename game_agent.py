@@ -122,7 +122,7 @@ class IsolationPlayer:
         positive value large enough to allow the function to return before the
         timer expires.
     """
-    def __init__(self, search_depth=3, score_fn=custom_score, timeout=10.):
+    def __init__(self, search_depth=999, score_fn=custom_score, timeout=10.):
         self.search_depth = search_depth
         self.score = score_fn
         self.time_left = None
@@ -175,7 +175,7 @@ class MinimaxBasedIsolationPlayer(IsolationPlayer):
             best_move = legal_moves[0]
 
             depth = 1
-            while depth <= self.search_depth or not self.search_depth == -1:
+            while self.search_depth >= depth:
                 best_move = self.search(game, depth)
                 depth = depth + 1
 
