@@ -100,8 +100,7 @@ def custom_score_3(game, player):
     return float(-opponent_moves)
 
 
-def minimax_with_score(isolation_player, game, depth, is_maximising_player,
-                       alpha=float("-inf"), beta=float("inf"), apply_alphabeta=False):
+def minimax_with_score(isolation_player, game, depth, is_maximising_player, alpha=float("-inf"), beta=float("inf"), apply_alphabeta=False):
     if isolation_player.time_left() < isolation_player.TIMER_THRESHOLD:
         raise SearchTimeout()
 
@@ -112,7 +111,7 @@ def minimax_with_score(isolation_player, game, depth, is_maximising_player,
         return current_score, legal_moves[0] if len(legal_moves) > 0 else (-1, -1)
 
     # print('Legal moves at depth {} for {}: {}'.format(depth, 'Player1' if is_maximising_player else 'Player2', legal_moves))
-    best_move = (float(-50) if is_maximising_player else float(50), legal_moves[0])
+    best_move = (float("-inf") if is_maximising_player else float("inf"), legal_moves[0])
     get_better_move = lambda x, y: max(x, y, key=lambda a: a[0]) if is_maximising_player else min(x, y, key=lambda a: a[0])
     updated_alpha = lambda a, x: max(a, x) if is_maximising_player else a
     updated_beta = lambda b, x: min(b, x) if not is_maximising_player else b
