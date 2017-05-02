@@ -24,7 +24,8 @@ from game_agent import (MinimaxPlayer, AlphaBetaPlayer, custom_score,
                         custom_score_2, custom_score_3)
 
 NUM_MATCHES = 5  # number of matches against each opponent
-TIME_LIMIT = 20  # number of milliseconds before timeout (orig=150)
+TIME_LIMIT = 25  # number of milliseconds before timeout (orig=150)
+MAX_DEPTH = 999
 
 DESCRIPTION = """
 This script evaluates the performance of the custom_score evaluation function
@@ -125,32 +126,32 @@ def play_matches(cpu_agents, test_agents, num_matches):
 
 
 def main():
+    for _ in range(5):
+        # Define two agents to compare -- these agents will play from the same
+        # starting position against the same adversaries in the tournament
+        test_agents = [
+            Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=improved_score), "AB_Improved"),
+            Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score), "AB_Custom"),
+            Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score_2), "AB_Custom_2"),
+            Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score_3), "AB_Custom_3")
+        ]
 
-    # Define two agents to compare -- these agents will play from the same
-    # starting position against the same adversaries in the tournament
-    test_agents = [
-        Agent(AlphaBetaPlayer(score_fn=improved_score), "AB_Improved"),
-        Agent(AlphaBetaPlayer(score_fn=custom_score), "AB_Custom"),
-        Agent(AlphaBetaPlayer(score_fn=custom_score_2), "AB_Custom_2"),
-        Agent(AlphaBetaPlayer(score_fn=custom_score_3), "AB_Custom_3")
-    ]
+        # Define a collection of agents to compete against the test agents
+        cpu_agents = [
+            Agent(RandomPlayer(), "Random"),
+            Agent(MinimaxPlayer(search_depth=MAX_DEPTH, score_fn=open_move_score), "MM_Open"),
+            Agent(MinimaxPlayer(search_depth=MAX_DEPTH, score_fn=center_score), "MM_Center"),
+            Agent(MinimaxPlayer(search_depth=MAX_DEPTH, score_fn=improved_score), "MM_Improved"),
+            Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=open_move_score), "AB_Open"),
+            Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=center_score), "AB_Center"),
+            Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=improved_score), "AB_Improved")
+        ]
 
-    # Define a collection of agents to compete against the test agents
-    cpu_agents = [
-        Agent(RandomPlayer(), "Random"),
-        Agent(MinimaxPlayer(score_fn=open_move_score), "MM_Open"),
-        Agent(MinimaxPlayer(score_fn=center_score), "MM_Center"),
-        Agent(MinimaxPlayer(score_fn=improved_score), "MM_Improved"),
-        Agent(AlphaBetaPlayer(score_fn=open_move_score), "AB_Open"),
-        Agent(AlphaBetaPlayer(score_fn=center_score), "AB_Center"),
-        Agent(AlphaBetaPlayer(score_fn=improved_score), "AB_Improved")
-    ]
-
-    print(DESCRIPTION)
-    print("{:^74}".format("*************************"))
-    print("{:^74}".format("Playing Matches"))
-    print("{:^74}".format("*************************"))
-    play_matches(cpu_agents, test_agents, NUM_MATCHES)
+        print(DESCRIPTION)
+        print("{:^74}".format("*************************"))
+        print("{:^74}".format("Playing Matches"))
+        print("{:^74}".format("*************************"))
+        play_matches(cpu_agents, test_agents, NUM_MATCHES)
 
 
 if __name__ == "__main__":
