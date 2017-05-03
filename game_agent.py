@@ -22,7 +22,6 @@ def get_open_moves(game, player):
     max_move = 8
     player_moves = len(game.get_legal_moves(player)) / max_move
     opponent_moves = len(game.get_legal_moves(game.get_opponent(player))) / max_move
-    inv_opponent_moves = (float(1) / opponent_moves) if opponent_moves > 0 else float(1)
     return player_moves, opponent_moves
 
 
@@ -45,7 +44,7 @@ def get_distance_from_blanks(game, player):
     blanks_centre_x = float(sum_move[1] / len(blanks))
     sq_dist_from_blanks = float((y - blanks_centre_y) ** 2 + (x - blanks_centre_x) ** 2)
     # sq_dist_from_blanks = (float(1) / sq_dist_from_blanks) if sq_dist_from_blanks > 0 else float(1)
-    return sq_dist_from_blanks
+    return sq_dist_from_blanks / float(game.width**2 + game.height**2)
 
 
 def get_distance_to_centre(game, player):
@@ -61,8 +60,7 @@ def get_distance_to_centre(game, player):
     player_loc = game.get_player_location(player)
     centre_loc = game.width / 2, game.height / 2
     dist_to_centre = (player_loc[0] - centre_loc[0]) ** 2 + (player_loc[1] - centre_loc[1]) ** 2
-    inv_dist_to_centre = (float(1) / dist_to_centre) if dist_to_centre > 0 else 1
-    return dist_to_centre
+    return dist_to_centre / float((game.width/2)**2 + (game.height/2)**2)
 
 
 def get_distance_to_opponent(game, player):
@@ -78,8 +76,11 @@ def get_distance_to_opponent(game, player):
     player_loc = game.get_player_location(player)
     opponent_loc = game.get_player_location(game.get_opponent(player))
     dist_to_opp = (player_loc[0] - opponent_loc[0]) ** 2 + (player_loc[1] - opponent_loc[1]) ** 2
-    inv_dist_to_opp = float(1) / dist_to_opp
-    return dist_to_opp
+    return dist_to_opp / float(game.width**2 + game.height**2)
+
+
+def invert(num):
+    return float(1) / max(num, 1e-10)
 
 
 def custom_score(game, player):
@@ -114,8 +115,33 @@ def custom_score(game, player):
         return float("inf")
 
     player_moves, opponent_moves = get_open_moves(game, player)
-    return player_moves - opponent_moves
+    dist_to_opp = get_distance_to_opponent(game, player)
+    dist_to_centre = get_distance_to_centre(game, player)
+    dist_from_blanks = get_distance_from_blanks(game, player)
 
+    blank_count = len(game.get_blank_spaces())
+    blank_perc = float(blank_count) / float(game.width * game.height)
+    # return (player_moves - opponent_moves)*(1 - blank_perc) - dist_to_opp*blank_perc
+
+    opp_loc = game.get_player_location(game.get_opponent(player))
+    ideal_row = opp_loc[0] + (-2 if opp_loc[0] > (game.height-1)/2 else 2)
+    ideal_col = opp_loc[1] + (-2 if opp_loc[1] > (game.width-1)/2 else 2)
+    ideal_loc = (ideal_row, ideal_col)
+    player_loc = game.get_player_location(player)
+    dist_to_ideal_loc = (player_loc[0] - ideal_loc[0]) ** 2 + (player_loc[1] - ideal_loc[1]) ** 2
+
+    y, x = game.get_player_location(player)
+    blanks = game.get_blank_spaces()
+    sum_move = (0, 0)
+    for blank in blanks:
+        sum_move = (sum_move[0] + blank[0], sum_move[1] + blank[1])
+    blanks_centre_y = float(sum_move[0] / len(blanks))
+    blanks_centre_x = float(sum_move[1] / len(blanks))
+    blank_centre = (blanks_centre_y, blanks_centre_x)
+
+    between_blank_opp = (blank_centre[0] + opp_loc[0])/float(2), (blank_centre[1] + opp_loc[1])/float(2)
+    dist_to_target = (player_loc[0] - between_blank_opp[0]) ** 2 + (player_loc[1] - between_blank_opp[1]) ** 2
+    return -dist_to_target if player_moves > 2 else player_moves-opponent_moves
 
 def custom_score_2(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -145,14 +171,15 @@ def custom_score_2(game, player):
     if game.is_winner(player):
         return float("inf")
 
-    sq_dist_from_blanks = get_distance_from_blanks(game, player)
-    sq_dist_from_blanks_opp = get_distance_from_blanks(game, game.get_opponent(player))
-
+    player_moves, opponent_moves = get_open_moves(game, player)
     dist_to_opp = get_distance_to_opponent(game, player)
     dist_to_centre = get_distance_to_centre(game, player)
+    dist_from_blanks = get_distance_from_blanks(game, player)
 
-    return -sq_dist_from_blanks + sq_dist_from_blanks_opp - dist_to_centre - dist_to_opp
-
+    blank_count = len(game.get_blank_spaces())
+    blank_perc = float(blank_count) / float(game.width * game.height)
+    # return (player_moves*2 - opponent_moves) * blank_perc - dist_to_centre * (1 - blank_perc)
+    return player_moves - dist_to_opp
 
 def custom_score_3(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -182,12 +209,14 @@ def custom_score_3(game, player):
     if game.is_winner(player):
         return float("inf")
 
+    player_moves, opponent_moves = get_open_moves(game, player)
     dist_to_opp = get_distance_to_opponent(game, player)
     dist_to_centre = get_distance_to_centre(game, player)
     dist_from_blanks = get_distance_from_blanks(game, player)
 
-    total_score = dist_to_centre + dist_from_blanks*2
-    return float(1) / total_score if total_score > 0 else 1
+    blank_count = len(game.get_blank_spaces())
+    blank_perc = float(blank_count) / float(game.width * game.height)
+    return player_moves - opponent_moves - dist_from_blanks * 0.4 * blank_perc
 
 
 class IsolationPlayer:

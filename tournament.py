@@ -23,8 +23,8 @@ from sample_players import (RandomPlayer, open_move_score,
 from game_agent import (MinimaxPlayer, AlphaBetaPlayer, custom_score,
                         custom_score_2, custom_score_3)
 
-NUM_MATCHES = 5  # number of matches against each opponent
-TIME_LIMIT = 25  # number of milliseconds before timeout (orig=150)
+NUM_MATCHES = 10  # number of matches against each opponent
+TIME_LIMIT = 20  # number of milliseconds before timeout (orig=150)
 MAX_DEPTH = 999
 
 DESCRIPTION = """
@@ -58,16 +58,21 @@ def play_round(cpu_agent, test_agents, win_counts, num_matches):
                 game.apply_move(move)
 
         # play all games and tally the results
+        last_lost_game_moves = []
+        count = 0
         for game in games:
-            winner, _, termination = game.play(time_limit=TIME_LIMIT)
+            winner, move_hist, termination = game.play(time_limit=TIME_LIMIT)
             win_counts[winner] += 1
+            if winner not in test_agents and count in (2, 3):
+                last_lost_game_moves = count, move_hist
+            count = count + 1
 
         if termination == "timeout":
             timeout_count += 1
         elif winner not in test_agents and termination == "forfeit":
             forfeit_count += 1
 
-    return timeout_count, forfeit_count
+    return timeout_count, forfeit_count, last_lost_game_moves
 
 
 def update(total_wins, wins):
@@ -98,15 +103,15 @@ def play_matches(cpu_agents, test_agents, num_matches):
 
         print("{!s:^9}{:^13}".format(idx + 1, agent.name), end="", flush=True)
 
-        counts = play_round(agent, test_agents, wins, num_matches)
-        total_timeouts += counts[0]
-        total_forfeits += counts[1]
+        timeout_count, forfeit_count, move_hist = play_round(agent, test_agents, wins, num_matches)
+        total_timeouts += timeout_count
+        total_forfeits += forfeit_count
         total_wins = update(total_wins, wins)
         _total = 2 * num_matches
         round_totals = sum([[wins[agent.player], _total - wins[agent.player]]
                             for agent in test_agents], [])
-        print(" {:^5}| {:^5} {:^5}| {:^5} {:^5}| {:^5} {:^5}| {:^5}"
-              .format(*round_totals))
+        print(" {:^5}| {:^5} {:^5}| {:^5} {:^5}| {:^5} {:^5}| {:^5}     {}"
+              .format(*round_totals, move_hist))
 
     print("-" * 74)
     print("{:^9}{:^13}{:^13}{:^13}{:^13}{:^13}\n".format(
@@ -126,32 +131,31 @@ def play_matches(cpu_agents, test_agents, num_matches):
 
 
 def main():
-    for _ in range(5):
-        # Define two agents to compare -- these agents will play from the same
-        # starting position against the same adversaries in the tournament
-        test_agents = [
-            Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=improved_score), "AB_Improved"),
-            Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score), "AB_Custom"),
-            Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score_2), "AB_Custom_2"),
-            Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score_3), "AB_Custom_3")
-        ]
+    # Define two agents to compare -- these agents will play from the same
+    # starting position against the same adversaries in the tournament
+    test_agents = [
+        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=improved_score), "AB_Improved"),
+        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score), "AB_Custom"),
+        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score_2), "AB_Custom_2"),
+        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score_3), "AB_Custom_3")
+    ]
 
-        # Define a collection of agents to compete against the test agents
-        cpu_agents = [
-            Agent(RandomPlayer(), "Random"),
-            Agent(MinimaxPlayer(search_depth=MAX_DEPTH, score_fn=open_move_score), "MM_Open"),
-            Agent(MinimaxPlayer(search_depth=MAX_DEPTH, score_fn=center_score), "MM_Center"),
-            Agent(MinimaxPlayer(search_depth=MAX_DEPTH, score_fn=improved_score), "MM_Improved"),
-            Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=open_move_score), "AB_Open"),
-            Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=center_score), "AB_Center"),
-            Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=improved_score), "AB_Improved")
-        ]
+    # Define a collection of agents to compete against the test agents
+    cpu_agents = [
+        Agent(RandomPlayer(), "Random"),
+        Agent(MinimaxPlayer(search_depth=MAX_DEPTH, score_fn=open_move_score), "MM_Open"),
+        Agent(MinimaxPlayer(search_depth=MAX_DEPTH, score_fn=center_score), "MM_Center"),
+        Agent(MinimaxPlayer(search_depth=MAX_DEPTH, score_fn=improved_score), "MM_Improved"),
+        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=open_move_score), "AB_Open"),
+        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=center_score), "AB_Center"),
+        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=improved_score), "AB_Improved")
+    ]
 
-        print(DESCRIPTION)
-        print("{:^74}".format("*************************"))
-        print("{:^74}".format("Playing Matches"))
-        print("{:^74}".format("*************************"))
-        play_matches(cpu_agents, test_agents, NUM_MATCHES)
+    print(DESCRIPTION)
+    print("{:^74}".format("*************************"))
+    print("{:^74}".format("Playing Matches"))
+    print("{:^74}".format("*************************"))
+    play_matches(cpu_agents, test_agents, NUM_MATCHES)
 
 
 if __name__ == "__main__":
