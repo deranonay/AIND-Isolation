@@ -108,13 +108,18 @@ def custom_score(game, player):
         The heuristic value of the current game state to the specified player.
     """
 
-    if game.is_loser(player):
-        return float("-inf")
-
-    if game.is_winner(player):
-        return float("inf")
-
     player_moves, opponent_moves = get_open_moves(game, player)
+    # if opponent_moves == 0:
+    #     return float("inf")
+    # elif player_moves == 0:
+    #     return float("-inf")
+
+    # if game.is_loser(player):
+    #     return float("-inf")
+    #
+    # if game.is_winner(player):
+    #     return float("inf")
+
     dist_to_opp = get_distance_to_opponent(game, player)
     dist_to_centre = get_distance_to_centre(game, player)
     dist_from_blanks = get_distance_from_blanks(game, player)
@@ -141,7 +146,8 @@ def custom_score(game, player):
 
     between_blank_opp = (blank_centre[0] + opp_loc[0])/float(2), (blank_centre[1] + opp_loc[1])/float(2)
     dist_to_target = (player_loc[0] - between_blank_opp[0]) ** 2 + (player_loc[1] - between_blank_opp[1]) ** 2
-    return -dist_to_target if player_moves > 2 else player_moves-opponent_moves
+
+    return player_moves / opponent_moves**2
 
 def custom_score_2(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -241,12 +247,12 @@ class IsolationPlayer:
         positive value large enough to allow the function to return before the
         timer expires.
     """
-    def __init__(self, search_depth=999, score_fn=custom_score, timeout=10.):
+    def __init__(self, search_depth=999, score_fn=custom_score, timeout=10., name=""):
         self.search_depth = search_depth
         self.score = score_fn
         self.time_left = None
         self.TIMER_THRESHOLD = timeout
-
+        self.name = name
 
 class MinimaxBasedIsolationPlayer(IsolationPlayer):
     """
@@ -353,7 +359,14 @@ class MinimaxBasedIsolationPlayer(IsolationPlayer):
         # Return the score of the active player if bottom of the depth is reached or if there are no moves available
         legal_moves = game.get_legal_moves(game.active_player)
         maximising = game.active_player == self
-        if depth == 0 or len(legal_moves) == 0:
+
+        if len(legal_moves) == 0:
+            if game.active_player.name == "AB_Custom" or game.inactive_player.name == "AB_Custom":
+                print(game.print_board())
+                print("Found ending game on depth {}. Active player is: {}".format(depth, ("P1 " if game.move_count % 2 == 0 else "P2 ") + game.active_player.name))
+            return float("-inf")
+
+        if depth == 0:
             current_score = self.score(game, game.active_player if maximising else game.inactive_player)
             return current_score, None
 

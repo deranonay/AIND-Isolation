@@ -25,7 +25,7 @@ from game_agent import (MinimaxPlayer, AlphaBetaPlayer, custom_score,
 
 NUM_MATCHES = 10  # number of matches against each opponent
 TIME_LIMIT = 20  # number of milliseconds before timeout (orig=150)
-MAX_DEPTH = 999
+MAX_DEPTH = 50
 
 DESCRIPTION = """
 This script evaluates the performance of the custom_score evaluation function
@@ -45,6 +45,7 @@ def play_round(cpu_agent, test_agents, win_counts, num_matches):
     """
     timeout_count = 0
     forfeit_count = 0
+    last_lost_game_moves = []
     for _ in range(num_matches):
 
         games = sum([[Board(cpu_agent.player, agent.player),
@@ -58,14 +59,13 @@ def play_round(cpu_agent, test_agents, win_counts, num_matches):
                 game.apply_move(move)
 
         # play all games and tally the results
-        last_lost_game_moves = []
         count = 0
         for game in games:
             winner, move_hist, termination = game.play(time_limit=TIME_LIMIT)
             win_counts[winner] += 1
-            if winner not in test_agents and count in (2, 3):
-                last_lost_game_moves = count, move_hist
-            count = count + 1
+            if winner.name != "AB_Custom" and game.active_player.name == "AB_Custom":
+                last_lost_game_moves.append(("P1" if game.move_count % 2 else "P2", move_hist))
+            count += 1
 
         if termination == "timeout":
             timeout_count += 1
@@ -110,8 +110,10 @@ def play_matches(cpu_agents, test_agents, num_matches):
         _total = 2 * num_matches
         round_totals = sum([[wins[agent.player], _total - wins[agent.player]]
                             for agent in test_agents], [])
-        print(" {:^5}| {:^5} {:^5}| {:^5} {:^5}| {:^5} {:^5}| {:^5}     {}"
-              .format(*round_totals, move_hist))
+        print(" {:^5}| {:^5} {:^5}| {:^5} {:^5}| {:^5} {:^5}| {:^5}"
+              .format(*round_totals))
+        for hist in move_hist:
+            print("\t\t\t\t{} {}".format(hist[0], hist[1]))
 
     print("-" * 74)
     print("{:^9}{:^13}{:^13}{:^13}{:^13}{:^13}\n".format(
@@ -134,10 +136,10 @@ def main():
     # Define two agents to compare -- these agents will play from the same
     # starting position against the same adversaries in the tournament
     test_agents = [
-        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=improved_score), "AB_Improved"),
-        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score), "AB_Custom"),
-        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score_2), "AB_Custom_2"),
-        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score_3), "AB_Custom_3")
+        Agent(AlphaBetaPlayer(search_depth=1, score_fn=improved_score), "AB_Improved"),
+        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score, name="AB_Custom"), "AB_Custom"),
+        Agent(AlphaBetaPlayer(search_depth=1, score_fn=custom_score_2), "AB_Custom_2"),
+        Agent(AlphaBetaPlayer(search_depth=1, score_fn=custom_score_3), "AB_Custom_3")
     ]
 
     # Define a collection of agents to compete against the test agents
