@@ -147,7 +147,7 @@ def custom_score(game, player):
     between_blank_opp = (blank_centre[0] + opp_loc[0])/float(2), (blank_centre[1] + opp_loc[1])/float(2)
     dist_to_target = (player_loc[0] - between_blank_opp[0]) ** 2 + (player_loc[1] - between_blank_opp[1]) ** 2
 
-    return player_moves / opponent_moves**2
+    return player_moves - opponent_moves
 
 def custom_score_2(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -247,12 +247,13 @@ class IsolationPlayer:
         positive value large enough to allow the function to return before the
         timer expires.
     """
-    def __init__(self, search_depth=999, score_fn=custom_score, timeout=10., name=""):
+    def __init__(self, search_depth=999, score_fn=custom_score, timeout=10., name="", info_log=False):
         self.search_depth = search_depth
         self.score = score_fn
         self.time_left = None
         self.TIMER_THRESHOLD = timeout
         self.name = name
+        self.info_log = info_log
 
 class MinimaxBasedIsolationPlayer(IsolationPlayer):
     """
@@ -316,13 +317,27 @@ class MinimaxBasedIsolationPlayer(IsolationPlayer):
             best_move = legal_moves[0]
 
             # Perform iterative deepening search.
+            last_best_move = None
+            count_same_move = 0
             depth = 1
             while self.search_depth >= depth:
                 best_move = self.search(game, depth)
+                if self.info_log:
+                    if game.active_player.name == "AB_Custom" or game.inactive_player.name == "AB_Custom":
+                        print("Best move at depth {} {}".format(depth, best_move))
+                        print(game.print_board())
                 depth = depth + 1
+                if best_move == last_best_move:
+                    count_same_move += 1
+                else:
+                    count_same_move = 1
+                    last_best_move = best_move
 
         except SearchTimeout:
             # Handle any actions required at timeout, if necessary
+            if self.info_log:
+                if game.active_player.name == "AB_Custom" or game.inactive_player.name == "AB_Custom":
+                    print("Timed out")
             return best_move
 
         # Return the best move from the last completed search iteration
@@ -358,15 +373,16 @@ class MinimaxBasedIsolationPlayer(IsolationPlayer):
 
         # Return the score of the active player if bottom of the depth is reached or if there are no moves available
         legal_moves = game.get_legal_moves(game.active_player)
+        opp_moves = game.get_legal_moves(game.inactive_player)
         maximising = game.active_player == self
 
-        if len(legal_moves) == 0:
-            if game.active_player.name == "AB_Custom" or game.inactive_player.name == "AB_Custom":
-                print(game.print_board())
-                print("Found ending game on depth {}. Active player is: {}".format(depth, ("P1 " if game.move_count % 2 == 0 else "P2 ") + game.active_player.name))
-            return float("-inf")
+        # if len(legal_moves) == 0:
+        #     return float("-inf") if maximising else float("inf"), None
+        #
+        # if len(opp_moves) == 0:
+        #     return float("inf") if maximising else float("-inf"), None
 
-        if depth == 0:
+        if depth == 0 or len(legal_moves) == 0:
             current_score = self.score(game, game.active_player if maximising else game.inactive_player)
             return current_score, None
 
@@ -478,7 +494,11 @@ class MinimaxBasedIsolationPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
-        return self.minimax_with_score(game, depth, alpha, beta, True)[1]
+        score = self.minimax_with_score(game, depth, alpha, beta, True)
+        if self.info_log:
+            if game.active_player.name == "AB_Custom" or game.inactive_player.name == "AB_Custom":
+                print("score is {}".format(score))
+            return score[1]
 
 
 class MinimaxPlayer(MinimaxBasedIsolationPlayer):

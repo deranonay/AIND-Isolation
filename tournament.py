@@ -24,8 +24,8 @@ from game_agent import (MinimaxPlayer, AlphaBetaPlayer, custom_score,
                         custom_score_2, custom_score_3)
 
 NUM_MATCHES = 10  # number of matches against each opponent
-TIME_LIMIT = 20  # number of milliseconds before timeout (orig=150)
-MAX_DEPTH = 50
+TIME_LIMIT = 150  # number of milliseconds before timeout (orig=150)
+MAX_DEPTH = 3
 
 DESCRIPTION = """
 This script evaluates the performance of the custom_score evaluation function
@@ -64,7 +64,7 @@ def play_round(cpu_agent, test_agents, win_counts, num_matches):
             winner, move_hist, termination = game.play(time_limit=TIME_LIMIT)
             win_counts[winner] += 1
             if winner.name != "AB_Custom" and game.active_player.name == "AB_Custom":
-                last_lost_game_moves.append(("P1" if game.move_count % 2 else "P2", move_hist))
+                last_lost_game_moves.append((termination, move_hist))
             count += 1
 
         if termination == "timeout":
@@ -136,10 +136,10 @@ def main():
     # Define two agents to compare -- these agents will play from the same
     # starting position against the same adversaries in the tournament
     test_agents = [
-        Agent(AlphaBetaPlayer(search_depth=1, score_fn=improved_score), "AB_Improved"),
+        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=improved_score), "AB_Improved"),
         Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score, name="AB_Custom"), "AB_Custom"),
-        Agent(AlphaBetaPlayer(search_depth=1, score_fn=custom_score_2), "AB_Custom_2"),
-        Agent(AlphaBetaPlayer(search_depth=1, score_fn=custom_score_3), "AB_Custom_3")
+        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score_2), "AB_Custom_2"),
+        Agent(AlphaBetaPlayer(search_depth=MAX_DEPTH, score_fn=custom_score_3), "AB_Custom_3")
     ]
 
     # Define a collection of agents to compete against the test agents
