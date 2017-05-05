@@ -9,6 +9,32 @@ class SearchTimeout(Exception):
     pass
 
 
+def get_path_count(game, player):
+    """
+        :param game : `isolation.Board`
+            An instance of `isolation.Board` encoding the current state of the
+            game (e.g., player locations and blocked cells).
+        :param player: object
+            A player instance in the current game (i.e., an object corresponding to
+            one of the player objects `game.__player_1__` or `game.__player_2__`.)
+        :return: int
+            Count of potential paths player can take. Values are restricted to [0, 3] range.
+        """
+    path_count = 0
+    for m1 in game.get_legal_moves(player):
+        if path_count == 3:
+            break
+        game_post_m1 = game.forecast_move(m1)
+        for m2 in game_post_m1.get_legal_moves(player):
+            game_post_m2 = game_post_m1.forecast_move(m2)
+            move_count = len(game_post_m2.get_legal_moves(player))
+            if move_count > 0:
+                path_count += 1
+                break
+
+    return path_count
+
+
 def get_open_moves(game, player):
     """
     :param game : `isolation.Board`
@@ -114,11 +140,11 @@ def custom_score(game, player):
     # elif player_moves == 0:
     #     return float("-inf")
 
-    # if game.is_loser(player):
-    #     return float("-inf")
-    #
-    # if game.is_winner(player):
-    #     return float("inf")
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
 
     dist_to_opp = get_distance_to_opponent(game, player)
     dist_to_centre = get_distance_to_centre(game, player)
@@ -147,7 +173,8 @@ def custom_score(game, player):
     between_blank_opp = (blank_centre[0] + opp_loc[0])/float(2), (blank_centre[1] + opp_loc[1])/float(2)
     dist_to_target = (player_loc[0] - between_blank_opp[0]) ** 2 + (player_loc[1] - between_blank_opp[1]) ** 2
 
-    return player_moves - opponent_moves
+    return (player_moves - opponent_moves)*blank_perc + get_path_count(game, player)*0.2*(1-blank_perc)
+
 
 def custom_score_2(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -184,8 +211,22 @@ def custom_score_2(game, player):
 
     blank_count = len(game.get_blank_spaces())
     blank_perc = float(blank_count) / float(game.width * game.height)
-    # return (player_moves*2 - opponent_moves) * blank_perc - dist_to_centre * (1 - blank_perc)
-    return player_moves - dist_to_opp
+    # return (player_moves*blank_perc - opponent_moves*(1-blank_perc))/blank_perc - dist_from_blanks * 0.4 * blank_perc
+
+    y, x = game.get_player_location(player)
+    blanks = game.get_blank_spaces()
+    sum_move = (0, 0)
+    for blank in blanks:
+        sum_move = (sum_move[0] + blank[0], sum_move[1] + blank[1])
+    blanks_centre_y = float(sum_move[0] / len(blanks))
+    blanks_centre_x = float(sum_move[1] / len(blanks))
+    blank_centre = (blanks_centre_y, blanks_centre_x)
+
+    opp_loc = game.get_player_location(game.get_opponent(player))
+    player_loc = game.get_player_location(player)
+    between_blank_opp = (blank_centre[0] + opp_loc[0]) / float(2), (blank_centre[1] + opp_loc[1]) / float(2)
+    dist_to_target = (player_loc[0] - between_blank_opp[0]) ** 2 + (player_loc[1] - between_blank_opp[1]) ** 2
+    return player_moves - opponent_moves - dist_to_target * 0.4 * blank_perc
 
 def custom_score_3(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -498,7 +539,8 @@ class MinimaxBasedIsolationPlayer(IsolationPlayer):
         if self.info_log:
             if game.active_player.name == "AB_Custom" or game.inactive_player.name == "AB_Custom":
                 print("score is {}".format(score))
-            return score[1]
+
+        return score[1]
 
 
 class MinimaxPlayer(MinimaxBasedIsolationPlayer):
