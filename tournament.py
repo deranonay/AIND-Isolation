@@ -24,8 +24,8 @@ from game_agent import (MinimaxPlayer, AlphaBetaPlayer, custom_score,
                         custom_score_2, custom_score_3)
 
 NUM_MATCHES = 5  # number of matches against each opponent
-TIME_LIMIT = 150  # number of milliseconds before timeout (orig=150)
-MAX_DEPTH = 3
+TIME_LIMIT = 50  # number of milliseconds before timeout (orig=150)
+MAX_DEPTH = 5
 
 DESCRIPTION = """
 This script evaluates the performance of the custom_score evaluation function

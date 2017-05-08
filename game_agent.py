@@ -9,32 +9,6 @@ class SearchTimeout(Exception):
     pass
 
 
-def get_path_count(game, player):
-    """
-        :param game : `isolation.Board`
-            An instance of `isolation.Board` encoding the current state of the
-            game (e.g., player locations and blocked cells).
-        :param player: object
-            A player instance in the current game (i.e., an object corresponding to
-            one of the player objects `game.__player_1__` or `game.__player_2__`.)
-        :return: int
-            Count of potential paths player can take. Values are restricted to [0, 3] range.
-        """
-    path_count = 0
-    for m1 in game.get_legal_moves(player):
-        if path_count == 3:
-            break
-        game_post_m1 = game.forecast_move(m1)
-        for m2 in game_post_m1.get_legal_moves(player):
-            game_post_m2 = game_post_m1.forecast_move(m2)
-            move_count = len(game_post_m2.get_legal_moves(player))
-            if move_count > 0:
-                path_count += 1
-                break
-
-    return path_count
-
-
 def get_open_moves(game, player):
     """
     :param game : `isolation.Board`
@@ -43,34 +17,13 @@ def get_open_moves(game, player):
     :param player: object
         A player instance in the current game (i.e., an object corresponding to
         one of the player objects `game.__player_1__` or `game.__player_2__`.)
-    :return: tuple of player moves and inverted opponent moves normalised to 0-1 range.
+    :return: (float, float)
+        Tuple of player moves and opponent moves, normalised to 0-1 range.
     """
-    max_move = 8
+    max_move = float(8)
     player_moves = len(game.get_legal_moves(player)) / max_move
     opponent_moves = len(game.get_legal_moves(game.get_opponent(player))) / max_move
     return player_moves, opponent_moves
-
-
-def get_distance_from_blanks(game, player):
-    """
-    :param game : `isolation.Board`
-        An instance of `isolation.Board` encoding the current state of the
-        game (e.g., player locations and blocked cells). 
-    :param player: object
-        A player instance in the current game (i.e., an object corresponding to
-        one of the player objects `game.__player_1__` or `game.__player_2__`.)
-    :return: inverted squared distance from centre of all blanks in the board
-    """
-    y, x = game.get_player_location(player)
-    blanks = game.get_blank_spaces()
-    sum_move = (0, 0)
-    for blank in blanks:
-        sum_move = (sum_move[0] + blank[0], sum_move[1] + blank[1])
-    blanks_centre_y = float(sum_move[0] / len(blanks))
-    blanks_centre_x = float(sum_move[1] / len(blanks))
-    sq_dist_from_blanks = float((y - blanks_centre_y) ** 2 + (x - blanks_centre_x) ** 2)
-    # sq_dist_from_blanks = (float(1) / sq_dist_from_blanks) if sq_dist_from_blanks > 0 else float(1)
-    return sq_dist_from_blanks / float(game.width**2 + game.height**2)
 
 
 def get_distance_to_centre(game, player):
@@ -81,12 +34,35 @@ def get_distance_to_centre(game, player):
     :param player: object
         A player instance in the current game (i.e., an object corresponding to
         one of the player objects `game.__player_1__` or `game.__player_2__`.)
-    :return: inverted squared distance to the centre of the board
+    :return: float:
+        Squared distance to the centre of the board, normalised to 0-1 range
     """
     player_loc = game.get_player_location(player)
     centre_loc = game.width / 2, game.height / 2
     dist_to_centre = (player_loc[0] - centre_loc[0]) ** 2 + (player_loc[1] - centre_loc[1]) ** 2
     return dist_to_centre / float((game.width/2)**2 + (game.height/2)**2)
+
+
+def get_distance_to_blanks(game, player):
+    """
+    :param game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells). 
+    :param player: object
+        A player instance in the current game (i.e., an object corresponding to
+        one of the player objects `game.__player_1__` or `game.__player_2__`.)
+    :return: float:
+        Squared distance to the centre of all blanks in the board, normalised to 0-1 range
+    """
+    y, x = game.get_player_location(player)
+    blanks = game.get_blank_spaces()
+    sum_move = (0, 0)
+    for blank in blanks:
+        sum_move = (sum_move[0] + blank[0], sum_move[1] + blank[1])
+    blanks_centre_y = float(sum_move[0] / len(blanks))
+    blanks_centre_x = float(sum_move[1] / len(blanks))
+    sq_dist_from_blanks = float((y - blanks_centre_y) ** 2 + (x - blanks_centre_x) ** 2)
+    return sq_dist_from_blanks / float(game.width**2 + game.height**2)
 
 
 def get_distance_to_opponent(game, player):
@@ -97,7 +73,8 @@ def get_distance_to_opponent(game, player):
     :param player: object
         A player instance in the current game (i.e., an object corresponding to
         one of the player objects `game.__player_1__` or `game.__player_2__`.)
-    :return: inverted squared distance to the opponent
+    :return: float:
+        Squared distance to the opponent, normalised to 0-1 range
     """
     player_loc = game.get_player_location(player)
     opponent_loc = game.get_player_location(game.get_opponent(player))
@@ -105,15 +82,36 @@ def get_distance_to_opponent(game, player):
     return dist_to_opp / float(game.width**2 + game.height**2)
 
 
-def invert(num):
-    return float(1) / max(num, 1e-10)
+def get_distance_to_target(game, player):
+    """
+        :param game : `isolation.Board`
+            An instance of `isolation.Board` encoding the current state of the
+            game (e.g., player locations and blocked cells). 
+        :param player: object
+            A player instance in the current game (i.e., an object corresponding to
+            one of the player objects `game.__player_1__` or `game.__player_2__`.)
+        :return: float:
+            Squared distance to the middle point between the opponent and the centre of the board, 
+        normalised to 0-1 range
+        """
+    blanks = game.get_blank_spaces()
+    sum_move = (0, 0)
+    for blank in blanks:
+        sum_move = (sum_move[0] + blank[0], sum_move[1] + blank[1])
+    blanks_centre_y = float(sum_move[0] / len(blanks))
+    blanks_centre_x = float(sum_move[1] / len(blanks))
+    blank_centre = (blanks_centre_y, blanks_centre_x)
+
+    opp_loc = game.get_player_location(game.get_opponent(player))
+    player_loc = game.get_player_location(player)
+    between_blank_opp = (blank_centre[0] + opp_loc[0]) / float(2), (blank_centre[1] + opp_loc[1]) / float(2)
+    dist_to_target = (player_loc[0] - between_blank_opp[0]) ** 2 + (player_loc[1] - between_blank_opp[1]) ** 2
+    return dist_to_target / float(game.width**2 + game.height**2)
 
 
 def custom_score(game, player):
     """Calculate the heuristic value of a game state from the point of view
     of the given player.
-
-    This should be the best heuristic function for your project submission.
 
     Note: this function should be called from within a Player instance as
     `self.score()` -- you should not need to call this function directly.
@@ -133,47 +131,18 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-
-    player_moves, opponent_moves = get_open_moves(game, player)
-    # if opponent_moves == 0:
-    #     return float("inf")
-    # elif player_moves == 0:
-    #     return float("-inf")
-
     if game.is_loser(player):
         return float("-inf")
 
     if game.is_winner(player):
         return float("inf")
 
-    dist_to_opp = get_distance_to_opponent(game, player)
-    dist_to_centre = get_distance_to_centre(game, player)
-    dist_from_blanks = get_distance_from_blanks(game, player)
+    player_moves, opponent_moves = get_open_moves(game, player)
+    dist_from_blanks = get_distance_to_blanks(game, player)
 
     blank_count = len(game.get_blank_spaces())
     blank_perc = float(blank_count) / float(game.width * game.height)
-    # return (player_moves - opponent_moves)*(1 - blank_perc) - dist_to_opp*blank_perc
-
-    opp_loc = game.get_player_location(game.get_opponent(player))
-    ideal_row = opp_loc[0] + (-2 if opp_loc[0] > (game.height-1)/2 else 2)
-    ideal_col = opp_loc[1] + (-2 if opp_loc[1] > (game.width-1)/2 else 2)
-    ideal_loc = (ideal_row, ideal_col)
-    player_loc = game.get_player_location(player)
-    dist_to_ideal_loc = (player_loc[0] - ideal_loc[0]) ** 2 + (player_loc[1] - ideal_loc[1]) ** 2
-
-    y, x = game.get_player_location(player)
-    blanks = game.get_blank_spaces()
-    sum_move = (0, 0)
-    for blank in blanks:
-        sum_move = (sum_move[0] + blank[0], sum_move[1] + blank[1])
-    blanks_centre_y = float(sum_move[0] / len(blanks))
-    blanks_centre_x = float(sum_move[1] / len(blanks))
-    blank_centre = (blanks_centre_y, blanks_centre_x)
-
-    between_blank_opp = (blank_centre[0] + opp_loc[0])/float(2), (blank_centre[1] + opp_loc[1])/float(2)
-    dist_to_target = (player_loc[0] - between_blank_opp[0]) ** 2 + (player_loc[1] - between_blank_opp[1]) ** 2
-
-    return (player_moves - opponent_moves)*blank_perc + get_path_count(game, player)*0.2*(1-blank_perc)
+    return player_moves - opponent_moves - dist_from_blanks * blank_perc * 0.5
 
 
 def custom_score_2(game, player):
@@ -204,33 +173,17 @@ def custom_score_2(game, player):
     if game.is_winner(player):
         return float("inf")
 
-    player_moves, opponent_moves = get_open_moves(game, player)
+    player_moves, _ = get_open_moves(game, player)
     dist_to_opp = get_distance_to_opponent(game, player)
-    dist_to_centre = get_distance_to_centre(game, player)
-    dist_from_blanks = get_distance_from_blanks(game, player)
 
-    blank_count = len(game.get_blank_spaces())
-    blank_perc = float(blank_count) / float(game.width * game.height)
-    # return (player_moves*blank_perc - opponent_moves*(1-blank_perc))/blank_perc - dist_from_blanks * 0.4 * blank_perc
+    return dist_to_opp + player_moves * 5
 
-    y, x = game.get_player_location(player)
-    blanks = game.get_blank_spaces()
-    sum_move = (0, 0)
-    for blank in blanks:
-        sum_move = (sum_move[0] + blank[0], sum_move[1] + blank[1])
-    blanks_centre_y = float(sum_move[0] / len(blanks))
-    blanks_centre_x = float(sum_move[1] / len(blanks))
-    blank_centre = (blanks_centre_y, blanks_centre_x)
-
-    opp_loc = game.get_player_location(game.get_opponent(player))
-    player_loc = game.get_player_location(player)
-    between_blank_opp = (blank_centre[0] + opp_loc[0]) / float(2), (blank_centre[1] + opp_loc[1]) / float(2)
-    dist_to_target = (player_loc[0] - between_blank_opp[0]) ** 2 + (player_loc[1] - between_blank_opp[1]) ** 2
-    return player_moves - opponent_moves - dist_to_target * 0.4 * blank_perc
 
 def custom_score_3(game, player):
     """Calculate the heuristic value of a game state from the point of view
     of the given player.
+
+    This should be the best heuristic function for your project submission.
 
     Note: this function should be called from within a Player instance as
     `self.score()` -- you should not need to call this function directly.
@@ -250,20 +203,17 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
+
     if game.is_loser(player):
         return float("-inf")
 
     if game.is_winner(player):
         return float("inf")
 
-    player_moves, opponent_moves = get_open_moves(game, player)
-    dist_to_opp = get_distance_to_opponent(game, player)
-    dist_to_centre = get_distance_to_centre(game, player)
-    dist_from_blanks = get_distance_from_blanks(game, player)
+    player_moves, _ = get_open_moves(game, player)
+    dist_to_target = get_distance_to_target(game, player)
 
-    blank_count = len(game.get_blank_spaces())
-    blank_perc = float(blank_count) / float(game.width * game.height)
-    return player_moves - opponent_moves - dist_from_blanks * 0.4 * blank_perc
+    return dist_to_target + player_moves
 
 
 class IsolationPlayer:
@@ -295,6 +245,7 @@ class IsolationPlayer:
         self.TIMER_THRESHOLD = timeout
         self.name = name
         self.info_log = info_log
+
 
 class MinimaxBasedIsolationPlayer(IsolationPlayer):
     """
@@ -414,14 +365,7 @@ class MinimaxBasedIsolationPlayer(IsolationPlayer):
 
         # Return the score of the active player if bottom of the depth is reached or if there are no moves available
         legal_moves = game.get_legal_moves(game.active_player)
-        opp_moves = game.get_legal_moves(game.inactive_player)
         maximising = game.active_player == self
-
-        # if len(legal_moves) == 0:
-        #     return float("-inf") if maximising else float("inf"), None
-        #
-        # if len(opp_moves) == 0:
-        #     return float("inf") if maximising else float("-inf"), None
 
         if depth == 0 or len(legal_moves) == 0:
             current_score = self.score(game, game.active_player if maximising else game.inactive_player)
